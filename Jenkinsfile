@@ -13,7 +13,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 echo 'Checking out Express frontend code...'
-                git branch: 'main', url: 'https://github.com/YOUR_USERNAME/express-frontend.git'
+                git branch: 'main', url: 'https://github.com/Aman-Jha-812/express-frontend.git'
             }
         }
         
