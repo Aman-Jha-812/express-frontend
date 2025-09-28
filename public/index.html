@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express Frontend + Flask Backend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .status-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .status-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .status-card.connected {
+            border-left-color: #27ae60;
+        }
+        
+        .status-card.disconnected {
+            border-left-color: #e74c3c;
+        }
+        
+        .data-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .data-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background: #219a52;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .loading {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        .error {
+            color: #e74c3c;
+            background: #ffeaa7;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #27ae60;
+            background: #d5f5e3;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 CI/CD Deployment Demo</h1>
+            <p>Express Frontend + Flask Backend on AWS EC2</p>
+        </div>
+        
+        <div class="content">
+            <div class="status-container">
+                <div class="status-card" id="frontendStatus">
+                    <h3>Frontend Status</h3>
+                    <div class="loading">Checking...</div>
+                </div>
+                
+                <div class="status-card" id="backendStatus">
+                    <h3>Backend Status</h3>
+                    <div class="loading">Checking...</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="checkStatus()">🔄 Check Status</button>
+                <button class="btn btn-success" onclick="fetchData()">📊 Fetch Data</button>
+                <button class="btn" onclick="fetchUsers()">👥 Fetch Users</button>
+            </div>
+            
+            <div class="data-section">
+                <h2>API Response</h2>
+                <pre id="apiResponse">Click buttons above to fetch data...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Format JSON for display
+        function formatJson(json) {
+            return JSON.stringify(json, null, 2);
+        }
+
+        // Update status card
+        function updateStatusCard(elementId, status, message) {
+            const card = document.getElementById(elementId);
+            const statusClass = status === 'connected' ? 'connected' : 'disconnected';
+            card.className = `status-card ${statusClass}`;
+            card.innerHTML = `<h3>${elementId.replace('Status', ' Status')}</h3><div class="${status}">${message}</div>`;
+        }
+
+        // Check overall status
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                updateStatusCard('frontendStatus', 'connected', 
+                    `✅ Express Frontend running on port ${data.timestamp ? '3000' : 'N/A'}`);
+                
+                if (data.status === 'connected') {
+                    updateStatusCard('backendStatus', 'connected', 
+                        `✅ Flask Backend connected - ${data.backend.service}`);
+                } else {
+                    updateStatusCard('backendStatus', 'disconnected', 
+                        `❌ Backend connection failed`);
+                }
+                
+                document.getElementById('apiResponse').textContent = formatJson(data);
+            } catch (error) {
+                updateStatusCard('frontendStatus', 'disconnected', '❌ Frontend error');
+                updateStatusCard('backendStatus', 'disconnected', '❌ Connection failed');
+                document.getElementById('apiResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Fetch data from backend
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                document.getElementById('apiResponse').textContent = formatJson(data);
+            } catch (error) {
+                document.getElementById('apiResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Fetch users from backend
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const data = await response.json();
+                document.getElementById('apiResponse').textContent = formatJson(data);
+            } catch (error) {
+                document.getElementById('apiResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkStatus();
+        });
+    </script>
+</body>
+</html>
